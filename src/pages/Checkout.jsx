@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { API_URL } from '../config';
 
 const CITIES = ['Алматы', 'Астана', 'Шымкент', 'Караганда', 'Актобе', 'Атырау', 'Павлодар', 'Усть-Каменогорск', 'Семей', 'Костанай', 'Тараз', 'Актау'];
 
@@ -20,9 +22,28 @@ export default function Checkout() {
   });
 
   const [paymentMethod, setPaymentMethod] = useState('KASPI');
-  const [step, setStep] = useState('delivery'); // delivery | choose | kaspi_info | cod_warning | done
+  const [step, setStep] = useState('delivery');
   const [loading, setLoading] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoError, setPromoError] = useState('');
+  const [promoApplied, setPromoApplied] = useState('');
+
+  const discountedTotal = Math.round(totalAmount * (1 - promoDiscount / 100));
+
+  const applyPromo = async () => {
+    setPromoError('');
+    try {
+      const res = await axios.post(`${API_URL}/api/promo/validate`, { code: promoCode });
+      setPromoDiscount(res.data.discount);
+      setPromoApplied(res.data.code);
+    } catch (err) {
+      setPromoError(err.response?.data?.error || 'Неверный промокод');
+      setPromoDiscount(0);
+      setPromoApplied('');
+    }
+  };
 
   const updateField = (field, value) => setDelivery(prev => ({ ...prev, [field]: value }));
 
@@ -39,7 +60,7 @@ export default function Checkout() {
     try {
       const res = await api.post('/api/orders', {
         items,
-        totalAmount,
+        totalAmount: discountedTotal,
         paymentMethod,
         deliveryName: delivery.name,
         deliveryPhone: delivery.phone,
@@ -109,12 +130,30 @@ export default function Checkout() {
             </div>
           </div>
 
+          {/* Промокод */}
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600, display: 'block', marginBottom: '0.4rem' }}>🏷️ Промокод</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input className="input" placeholder="Введите промокод" value={promoCode}
+                onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); }}
+                style={{ flex: 1, textTransform: 'uppercase' }} />
+              <button onClick={applyPromo} className="btn-primary"
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>Применить</button>
+            </div>
+            {promoError && <p style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '0.4rem' }}>❌ {promoError}</p>}
+            {promoApplied && <p style={{ color: 'var(--green-600)', fontSize: '0.8rem', marginTop: '0.4rem', fontWeight: 600 }}>✅ Промокод {promoApplied}: скидка {promoDiscount}%</p>}
+          </div>
+
           {/* Итого */}
           <div className="card" style={{ padding: '1.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <span>Товаров: {items.length}</span>
               <span style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--green-600)' }}>
-                {totalAmount.toLocaleString()} ₸
+                {promoDiscount > 0 ? (
+                  <><s style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.9rem' }}>{totalAmount.toLocaleString()} ₸</s> {discountedTotal.toLocaleString()} ₸</>
+                ) : (
+                  <>{totalAmount.toLocaleString()} ₸</>
+                )}
               </span>
             </div>
           </div>
@@ -187,7 +226,7 @@ export default function Checkout() {
             <p style={{
               fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-dark)',
               marginTop: '0.75rem', padding: '0.5rem', background: 'var(--brown-50)', borderRadius: '10px',
-            }}>{totalAmount.toLocaleString()} ₸</p>
+            }}>{discountedTotal.toLocaleString()} ₸</p>
           </div>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
             После перевода нажмите кнопку ниже. Мы проверим оплату и подтвердим заказ.
