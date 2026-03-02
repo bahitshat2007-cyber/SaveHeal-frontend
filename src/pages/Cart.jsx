@@ -63,15 +63,15 @@ export default function Cart() {
               <button onClick={() => updateQty(item.productId, item.quantity - 1)}
                 style={{
                   width: '32px', height: '32px', borderRadius: '10px',
-                  border: '1.5px solid var(--green-200)', background: 'white',
-                  cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700,
+                  border: '1.5px solid var(--green-200)', background: 'transparent',
+                  cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-dark)',
                 }}>−</button>
               <span style={{ fontWeight: 700, minWidth: '24px', textAlign: 'center' }}>{item.quantity}</span>
               <button onClick={() => updateQty(item.productId, item.quantity + 1)}
                 style={{
                   width: '32px', height: '32px', borderRadius: '10px',
-                  border: '1.5px solid var(--green-200)', background: 'white',
-                  cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700,
+                  border: '1.5px solid var(--green-200)', background: 'transparent',
+                  cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-dark)',
                 }}>+</button>
             </div>
 
@@ -88,12 +88,9 @@ export default function Cart() {
       </div>
 
       {/* Итого */}
-      <div style={{
+      <div className="card" style={{
         marginTop: '1.5rem',
-        background: 'white',
-        borderRadius: '20px',
         padding: '1.5rem',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>Итого:</span>
