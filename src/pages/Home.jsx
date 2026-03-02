@@ -57,7 +57,7 @@ export default function Home() {
               className="input"
               style={{
                 paddingLeft: '1rem', fontSize: '0.95rem',
-                background: 'rgba(255,255,255,0.9)', borderColor: 'var(--green-200)',
+                borderColor: 'var(--green-200)',
                 boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
               }}
             />
