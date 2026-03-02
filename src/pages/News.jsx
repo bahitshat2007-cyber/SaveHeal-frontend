@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
 
 export default function News() {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('/api/news')
+    axios.get(`${API_URL}/api/news`)
       .then(res => setNews(res.data))
       .catch(() => {})
       .finally(() => setLoading(false));

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
 import ProductCard from '../components/ProductCard';
 import { ProductCardSkeleton } from '../components/Skeleton';
 import { useScrollReveal } from '../hooks/useScrollReveal';
@@ -13,8 +14,8 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      axios.get('/api/products'),
-      axios.get('/api/news'),
+      axios.get(`${API_URL}/api/products`),
+      axios.get(`${API_URL}/api/news`),
     ]).then(([pRes, nRes]) => {
       setProducts(pRes.data);
       setNews(nRes.data.slice(0, 3));

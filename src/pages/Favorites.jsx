@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../config';
 import ProductCard from '../components/ProductCard';
 import { useFavorites } from '../hooks/useFavorites';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +12,7 @@ export default function Favorites() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get('/api/products')
+    axios.get(`${API_URL}/api/products`)
       .then(res => setProducts(res.data))
       .catch(() => {})
       .finally(() => setLoading(false));

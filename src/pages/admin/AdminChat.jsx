@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { io } from 'socket.io-client';
+import { SOCKET_URL } from '../../config';
 
 export default function AdminChat() {
   const [users, setUsers] = useState([]);
@@ -16,7 +17,7 @@ export default function AdminChat() {
   useEffect(() => {
     if (socketRef.current?.connected) return;
 
-    const socket = io('http://localhost:5000');
+    const socket = io(SOCKET_URL);
     socketRef.current = socket;
 
     socket.emit('join_admin');

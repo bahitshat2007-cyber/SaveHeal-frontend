@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { SOCKET_URL } from '../config';
 
 const STATUS_MAP = {
   PENDING: { label: 'Ожидает', color: '#f59e0b', bg: '#fef3c7', icon: '⏳' },
@@ -24,7 +25,7 @@ export default function MyOrders() {
   // WebSocket — слушаем отмену заказа от админа
   useEffect(() => {
     if (!user) return;
-    const socket = io('http://localhost:5000');
+    const socket = io(SOCKET_URL);
     socket.emit('join', user.id);
 
     socket.on('order_cancelled', (data) => {

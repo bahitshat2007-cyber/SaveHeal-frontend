@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { useFavorites } from '../hooks/useFavorites';
 import axios from 'axios';
+import { API_URL } from '../config';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -16,7 +17,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    axios.get(`/api/products/${id}`)
+    axios.get(`${API_URL}/api/products/${id}`)
       .then(res => { setProduct(res.data); setLoading(false); })
       .catch(() => { setLoading(false); });
   }, [id]);
