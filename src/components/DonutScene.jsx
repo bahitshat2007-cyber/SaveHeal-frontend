@@ -1,36 +1,30 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 
-/* ───────── Пончик (Torus) с физикой наклона ───────── */
+/* ───────── Пончик с правильной глазурью ───────── */
 function Donut({ tilt }) {
   const ref = useRef();
-  const velocity = useRef({ x: 0, y: 0, z: 0 });
-  const position = useRef({ x: 0, y: 0, z: 0 });
+  const velocity = useRef({ x: 0, y: 0 });
+  const position = useRef({ x: 0, y: 0 });
 
-  // Границы (чтобы пончик не улетел за экран)
-  const BOUNDS = { x: 2.5, y: 2, z: 1.5 };
+  const BOUNDS = { x: 2.5, y: 2 };
   const DAMPING = 0.96;
-  const GRAVITY_SCALE = 0.003;
+  const GRAVITY = 0.003;
 
   useFrame((_, delta) => {
     if (!ref.current) return;
-    const dt = Math.min(delta, 0.05);
 
-    // Применяем "гравитацию" от наклона телефона
-    velocity.current.x += tilt.current.x * GRAVITY_SCALE;
-    velocity.current.y += tilt.current.y * GRAVITY_SCALE;
-
-    // Затухание
+    // Физика наклона
+    velocity.current.x += tilt.current.x * GRAVITY;
+    velocity.current.y += tilt.current.y * GRAVITY;
     velocity.current.x *= DAMPING;
     velocity.current.y *= DAMPING;
 
-    // Обновляем позицию
     position.current.x += velocity.current.x;
     position.current.y += velocity.current.y;
 
-    // Ограничения — отскок от стенок
+    // Отскок от стенок
     if (Math.abs(position.current.x) > BOUNDS.x) {
       position.current.x = Math.sign(position.current.x) * BOUNDS.x;
       velocity.current.x *= -0.5;
@@ -43,66 +37,90 @@ function Donut({ tilt }) {
     ref.current.position.x = position.current.x;
     ref.current.position.y = position.current.y;
 
-    // Вращение пончика
-    ref.current.rotation.x += dt * 0.8;
-    ref.current.rotation.z += dt * 0.5;
+    // Медленное вращение
+    ref.current.rotation.y += delta * 0.6;
   });
 
+  // Посыпка - точно на поверхности верхней части тора
+  const sprinkles = useMemo(() => {
+    const items = [];
+    const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#ffffff'];
+    const R = 0.7;
+    const r = 0.3;
+
+    for (let i = 0; i < 35; i++) {
+      const u = (i / 35) * Math.PI * 2; // вокруг кольца
+      const v = (Math.random() * 0.8 - 0.1) * Math.PI * 0.5; // только верх трубки
+
+      const surfaceR = r + 0.03;
+      const x = (R + surfaceR * Math.cos(v)) * Math.cos(u);
+      const y = surfaceR * Math.sin(v) + 0.05;
+      const z = (R + surfaceR * Math.cos(v)) * Math.sin(u);
+
+      items.push({
+        pos: [x, y, z],
+        rot: [Math.random() * 3, Math.random() * 3, Math.random() * 3],
+        color: colors[i % colors.length],
+      });
+    }
+    return items;
+  }, []);
+
   return (
-    <group ref={ref}>
-      {/* Тело пончика */}
+    <group ref={ref} rotation={[0.5, 0, 0]}>
+      {/* Основа пончика — тёплый цвет теста */}
       <mesh>
-        <torusGeometry args={[0.7, 0.35, 32, 64]} />
-        <meshStandardMaterial color="#f5a623" roughness={0.3} metalness={0.05} />
+        <torusGeometry args={[0.7, 0.3, 28, 48]} />
+        <meshStandardMaterial color="#d4943a" roughness={0.7} />
       </mesh>
-      {/* Глазурь (чуть больше тор) */}
-      <mesh position={[0, 0.05, 0]} rotation={[0.1, 0, 0]}>
-        <torusGeometry args={[0.7, 0.36, 32, 64, Math.PI * 1.2]} />
-        <meshStandardMaterial color="#ff69b4" roughness={0.2} metalness={0.1} />
+
+      {/* Глазурь — полный тор чуть больше, сдвинут вверх.
+          clippingPlanes обрезает нижнюю часть, оставляя только верх */}
+      <mesh position={[0, 0.02, 0]}>
+        <torusGeometry args={[0.7, 0.32, 28, 48]} />
+        <meshStandardMaterial
+          color="#ff6eb4"
+          roughness={0.2}
+          metalness={0.05}
+          clippingPlanes={[new THREE.Plane(new THREE.Vector3(0, -1, 0), 0.02)]}
+          clipShadows
+        />
       </mesh>
-      {/* Посыпка */}
-      {Array.from({ length: 20 }).map((_, i) => {
-        const angle = (i / 20) * Math.PI * 2;
-        const r = 0.7 + (Math.random() - 0.5) * 0.2;
-        return (
-          <mesh key={i}
-            position={[
-              Math.cos(angle) * r,
-              0.3 + Math.random() * 0.1,
-              Math.sin(angle) * r,
-            ]}
-            rotation={[Math.random(), Math.random(), Math.random()]}>
-            <boxGeometry args={[0.06, 0.02, 0.02]} />
-            <meshStandardMaterial color={['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6'][i % 5]} />
-          </mesh>
-        );
-      })}
+
+      {/* Посыпка — маленькие палочки */}
+      {sprinkles.map((s, i) => (
+        <mesh key={i} position={s.pos} rotation={s.rot}>
+          <capsuleGeometry args={[0.015, 0.06, 4, 6]} />
+          <meshStandardMaterial color={s.color} roughness={0.4} />
+        </mesh>
+      ))}
     </group>
   );
 }
 
-/* ───────── Конфетти частицы ───────── */
+/* ───────── Конфетти ───────── */
 function Confetti() {
-  const count = 40;
   const ref = useRef();
-  const particles = useRef(
-    Array.from({ length: count }).map(() => ({
+
+  const particles = useMemo(() =>
+    Array.from({ length: 40 }).map(() => ({
       x: (Math.random() - 0.5) * 6,
-      y: Math.random() * 4 + 2,
+      y: Math.random() * 5 + 1,
       z: (Math.random() - 0.5) * 3,
-      vy: -0.01 - Math.random() * 0.02,
-      rx: Math.random() * 0.05,
-      ry: Math.random() * 0.05,
+      vy: -0.008 - Math.random() * 0.012,
+      rx: Math.random() * 0.04,
+      ry: Math.random() * 0.04,
       color: ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899'][Math.floor(Math.random() * 6)],
-    }))
-  );
+      size: 0.06 + Math.random() * 0.06,
+    })),
+  []);
 
   useFrame(() => {
     if (!ref.current) return;
     ref.current.children.forEach((mesh, i) => {
-      const p = particles.current[i];
+      const p = particles[i];
       p.y += p.vy;
-      if (p.y < -3) p.y = 4;
+      if (p.y < -3) p.y = 5;
       mesh.position.set(p.x, p.y, p.z);
       mesh.rotation.x += p.rx;
       mesh.rotation.z += p.ry;
@@ -111,9 +129,9 @@ function Confetti() {
 
   return (
     <group ref={ref}>
-      {particles.current.map((p, i) => (
+      {particles.map((p, i) => (
         <mesh key={i} position={[p.x, p.y, p.z]}>
-          <planeGeometry args={[0.12, 0.12]} />
+          <planeGeometry args={[p.size, p.size]} />
           <meshBasicMaterial color={p.color} side={THREE.DoubleSide} transparent opacity={0.8} />
         </mesh>
       ))}
@@ -121,26 +139,24 @@ function Confetti() {
   );
 }
 
-/* ───────── Главный компонент (Канвас + гироскоп) ───────── */
+/* ───────── Главная сцена ───────── */
 export default function DonutScene({ style }) {
   const tilt = useRef({ x: 0, y: 0 });
   const [hasGyro, setHasGyro] = useState(false);
 
   useEffect(() => {
-    // Гироскоп — наклон телефона
+    // Гироскоп (телефон)
     const handleOrientation = (e) => {
       setHasGyro(true);
-      tilt.current.x = (e.gamma || 0) / 10; // лево-право
-      tilt.current.y = -(e.beta || 0) / 15; // вперед-назад
+      tilt.current.x = (e.gamma || 0) / 10;
+      tilt.current.y = -(e.beta || 0) / 15;
     };
 
-    // Мышка — для десктопа
+    // Мышка (десктоп) — двигаем пончик куда ведёт курсор
     const handleMouse = (e) => {
       if (hasGyro) return;
-      const x = (e.clientX / window.innerWidth - 0.5) * 4;
-      const y = -(e.clientY / window.innerHeight - 0.5) * 4;
-      tilt.current.x = x;
-      tilt.current.y = y;
+      tilt.current.x = (e.clientX / window.innerWidth - 0.5) * 5;
+      tilt.current.y = -(e.clientY / window.innerHeight - 0.5) * 5;
     };
 
     window.addEventListener('deviceorientation', handleOrientation);
@@ -153,11 +169,30 @@ export default function DonutScene({ style }) {
   }, [hasGyro]);
 
   return (
-    <div style={{ width: '100%', height: '280px', borderRadius: '20px', overflow: 'hidden', ...style }}>
-      <Canvas camera={{ position: [0, 0, 5], fov: 50 }} style={{ background: 'transparent' }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 5, 5]} intensity={1} />
-        <pointLight position={[-3, -3, 3]} intensity={0.4} color="#ff69b4" />
+    <div style={{
+      width: '100%', height: '280px', borderRadius: '20px', overflow: 'hidden',
+      position: 'relative',
+      border: '2px solid rgba(255,255,255,0.25)',
+      boxShadow: 'inset 0 0 30px rgba(255,255,255,0.1), 0 4px 20px rgba(0,0,0,0.1)',
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
+      ...style,
+    }}>
+      {/* Плёнка — блик сверху */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'linear-gradient(160deg, rgba(255,255,255,0.15) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.08) 100%)',
+        borderRadius: '20px',
+        pointerEvents: 'none',
+        zIndex: 10,
+      }} />
+      <Canvas
+        camera={{ position: [0, 1, 4], fov: 45 }}
+        style={{ background: 'transparent' }}
+        gl={{ localClippingEnabled: true }}
+      >
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[3, 5, 4]} intensity={1.2} />
+        <pointLight position={[-2, -2, 2]} intensity={0.3} color="#ff69b4" />
 
         <Donut tilt={tilt} />
         <Confetti />
