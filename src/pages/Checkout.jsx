@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL } from '../config';
+
+const DonutScene = lazy(() => import('../components/DonutScene'));
 
 const CITIES = ['Алматы', 'Астана', 'Шымкент', 'Караганда', 'Актобе', 'Атырау', 'Павлодар', 'Усть-Каменогорск', 'Семей', 'Костанай', 'Тараз', 'Актау'];
 
@@ -264,12 +266,15 @@ export default function Checkout() {
 
       {/* Шаг 4: Готово */}
       {step === 'done' && (
-        <div className="card" style={{ padding: '2.5rem', textAlign: 'center' }}>
-          <span style={{ fontSize: '4rem' }}>🎉</span>
+        <div className="card" style={{ padding: '2.5rem', textAlign: 'center', overflow: 'hidden' }}>
+          <Suspense fallback={<span style={{ fontSize: '4rem' }}>🍩</span>}>
+            <DonutScene style={{ marginBottom: '1rem' }} />
+          </Suspense>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '1rem 0 0.5rem', color: 'var(--green-700)' }}>Заказ оформлен!</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
             Заказ №{orderId} принят. Мы свяжемся с вами для подтверждения.
           </p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '1.5rem' }}>🍩 Наклоните телефон или двигайте мышкой!</p>
           <button onClick={() => navigate('/')} className="btn-primary">На главную</button>
         </div>
       )}
