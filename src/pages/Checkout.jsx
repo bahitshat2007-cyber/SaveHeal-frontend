@@ -14,6 +14,9 @@ export default function Checkout() {
   const { user, api } = useAuth();
   const navigate = useNavigate();
 
+  // Загружаем сохранённый шаблон доставки
+  const savedDelivery = JSON.parse(localStorage.getItem('savedDelivery') || 'null');
+
   // Форма доставки — автозаполнение с аккаунта
   const [delivery, setDelivery] = useState({
     name: user?.name || '',
@@ -22,6 +25,7 @@ export default function Checkout() {
     address: '',
     comment: '',
   });
+  const [usedTemplate, setUsedTemplate] = useState(false);
 
   const [paymentMethod, setPaymentMethod] = useState('KASPI');
   const [step, setStep] = useState('delivery');
@@ -72,6 +76,8 @@ export default function Checkout() {
       });
       setOrderId(res.data.id);
       setStep('done');
+      // Сохраняем шаблон доставки
+      localStorage.setItem('savedDelivery', JSON.stringify(delivery));
       clearCart();
     } catch {
       alert('Ошибка оформления заказа');
@@ -93,6 +99,32 @@ export default function Checkout() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="card" style={{ padding: '1.5rem' }}>
             <h3 style={{ marginBottom: '1rem', fontWeight: 700 }}>🚚 Доставка</h3>
+
+            {/* Шаблон из прошлого заказа */}
+            {savedDelivery && !usedTemplate && (
+              <div style={{
+                background: 'var(--green-50)', borderRadius: '14px', padding: '1rem',
+                marginBottom: '1rem', border: '1.5px solid var(--green-200)',
+              }}>
+                <p style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.5rem' }}>📋 Данные из прошлого заказа:</p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
+                  {savedDelivery.name} · {savedDelivery.phone}<br/>
+                  {savedDelivery.city}, {savedDelivery.address}
+                  {savedDelivery.comment && <><br/>💬 {savedDelivery.comment}</>}
+                </p>
+                <button onClick={() => {
+                  setDelivery(savedDelivery);
+                  setUsedTemplate(true);
+                }} className="btn-primary" style={{
+                  marginTop: '0.75rem', padding: '0.5rem 1.2rem', fontSize: '0.85rem',
+                }}>✅ Использовать эти данные</button>
+              </div>
+            )}
+            {usedTemplate && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--green-600)', fontWeight: 600, marginBottom: '0.75rem' }}>
+                ✅ Данные подставлены — можете изменить если нужно
+              </p>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div>
