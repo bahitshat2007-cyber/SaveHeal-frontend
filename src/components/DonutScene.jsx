@@ -1,16 +1,32 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
+import { useFBX } from '@react-three/drei';
 import * as THREE from 'three';
 
-/* ───────── Пончик с надежной геометрией глазури ───────── */
-function Donut({ tilt }) {
+/* ───────── Загружаем FBX модель пончика ───────── */
+function DonutModel({ tilt }) {
   const ref = useRef();
+  const fbx = useFBX('/models/Donut_with_chocolate.fbx');
   const velocity = useRef({ x: 0, y: 0 });
   const position = useRef({ x: 0, y: 0 });
 
   const BOUNDS = { x: 2.5, y: 2 };
   const DAMPING = 0.96;
   const GRAVITY = 0.003;
+
+  // Нормализуем размер модели
+  useEffect(() => {
+    if (!fbx) return;
+    const box = new THREE.Box3().setFromObject(fbx);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 2 / maxDim; // подгоняем под размер ~2 единицы
+    fbx.scale.setScalar(scale);
+
+    // Центрируем
+    const center = box.getCenter(new THREE.Vector3());
+    fbx.position.sub(center.multiplyScalar(scale));
+  }, [fbx]);
 
   useFrame((_, delta) => {
     if (!ref.current) return;
@@ -38,77 +54,12 @@ function Donut({ tilt }) {
     ref.current.position.y = position.current.y;
 
     // Медленное вращение
-    ref.current.rotation.y += delta * 0.6;
-    ref.current.rotation.x += delta * 0.2;
+    ref.current.rotation.y += delta * 0.5;
   });
 
-  // Посыпка (на поверхности TubeGeometry)
-  const sprinkles = useMemo(() => {
-    const items = [];
-    const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ffffff'];
-    const R = 0.7; // Радиус основного кольца пончика
-    const r = 0.32; // Радиус трубки глазури
-
-    for (let i = 0; i < 40; i++) {
-        // u - угол вокруг центра пончика
-        const u = (i / 40) * Math.PI * 2;
-        // v - угол на поверхности самой трубки глазури.
-        // Берем верхнюю часть трубки (-pi/2 до pi/2)
-        const v = (Math.random() - 0.5) * Math.PI * 0.8;
-        
-        // Математика поверхности тора (tube thickness r, main radius R)
-        // Но так как у глазури мы используем TubeGeometry вокруг кривой радиуса R,
-        // то её сечение - окружность радиуса r.
-        const x = (R + r * Math.sin(v)) * Math.cos(u);
-        const y = r * Math.cos(v); // Y смотрит вверх (т.к. мы повернем сплайн глазури)
-        const z = (R + r * Math.sin(v)) * Math.sin(u);
-
-        items.push({
-            pos: [x, y, z],
-            rot: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI],
-            color: colors[i % colors.length],
-        });
-    }
-    return items;
-  }, []);
-
-  // Геометрия глазури: Трубка, пущенная по кругу, но верхняя половина разрезана не будет.
-  // Вместо clipping plane, просто используем сплющенную полу-трубку.
-  const glazeCurve = useMemo(() => {
-    class DonutCurve extends THREE.Curve {
-        getPoint(t, optionalTarget = new THREE.Vector3()) {
-            const angle = t * Math.PI * 2;
-            return optionalTarget.set(0.7 * Math.cos(angle), 0, 0.7 * Math.sin(angle));
-        }
-    }
-    return new DonutCurve();
-  }, []);
-
   return (
-    <group ref={ref} rotation={[0.4, 0, 0.2]}>
-      {/* Основа пончика */}
-      <mesh>
-        <torusGeometry args={[0.7, 0.3, 32, 64]} />
-        <meshStandardMaterial color="#d89645" roughness={0.6} />
-      </mesh>
-
-      {/* Глазурь (Tube вокруг кольца, показываем только верхнюю "половину" трубки с помощью radialSegments/arc)
-          torusGeometry имеет arc параметр, но он режет кольцо, а не трубку!
-          Поэтому используем сплющенный torus, смещенный вверх. */}
-      <mesh position={[0, 0.08, 0]} scale={[1, 0.8, 1]}>
-        <torusGeometry args={[0.7, 0.31, 32, 64]} />
-        <meshStandardMaterial color="#ff69b4" roughness={0.2} metalness={0.1} />
-      </mesh>
-
-      {/* Посыпка */}
-      <group position={[0, 0.08, 0]} scale={[1, 0.8, 1]}>
-        {sprinkles.map((s, i) => (
-          <mesh key={i} position={s.pos} rotation={s.rot}>
-            <capsuleGeometry args={[0.015, 0.06, 4, 8]} />
-            <meshStandardMaterial color={s.color} roughness={0.3} />
-          </mesh>
-        ))}
-      </group>
+    <group ref={ref}>
+      <primitive object={fbx} />
     </group>
   );
 }
@@ -157,14 +108,12 @@ function Confetti() {
 /* ───────── Главная сцена ───────── */
 export default function DonutScene({ style }) {
   const tilt = useRef({ x: 0, y: 0 });
-  const [hasGyro, setHasGyro] = useState(false);
+  const hasGyro = useRef(false);
 
   useEffect(() => {
-    // Гироскоп (телефон)
     const handleOrientation = (e) => {
-      // Игнорируем если гироскоп выдает нули (десктопы иногда так делают)
       if (e.gamma === null || e.beta === null) return;
-      setHasGyro(true);
+      hasGyro.current = true;
       tilt.current.x = e.gamma / 10;
       tilt.current.y = -e.beta / 15;
     };
@@ -173,47 +122,24 @@ export default function DonutScene({ style }) {
     return () => window.removeEventListener('deviceorientation', handleOrientation);
   }, []);
 
-  // Мышка (десктоп) - вешаем на сам Canvas-контейнер, чтобы плёнка не блокировала!
   const handleMouseMove = (e) => {
-    if (hasGyro) return;
-    
-    // Получаем координаты относительно окна
-    const x = (e.clientX / window.innerWidth - 0.5) * 4;
-    const y = -(e.clientY / window.innerHeight - 0.5) * 4;
-    
-    tilt.current.x = x;
-    tilt.current.y = y;
+    if (hasGyro.current) return;
+    tilt.current.x = (e.clientX / window.innerWidth - 0.5) * 4;
+    tilt.current.y = -(e.clientY / window.innerHeight - 0.5) * 4;
   };
 
   return (
-    <div 
-      onMouseMove={handleMouseMove}
-      style={{
-        width: '100%', height: '280px', borderRadius: '20px', overflow: 'hidden',
-        position: 'relative',
-        border: '2px solid rgba(255,255,255,0.25)',
-        boxShadow: 'inset 0 0 30px rgba(255,255,255,0.1), 0 4px 20px rgba(0,0,0,0.1)',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
-        ...style,
-      }}
-    >
-      {/* Плёнка — блик сверху. pointerEvents: none крайне важен! */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'linear-gradient(160deg, rgba(255,255,255,0.15) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.08) 100%)',
-        borderRadius: '20px',
-        pointerEvents: 'none',
-        zIndex: 10,
-      }} />
+    <div className="donut-box" onMouseMove={handleMouseMove} style={style}>
+      <div className="donut-film" />
       <Canvas
-        camera={{ position: [0, 1, 4.5], fov: 45 }}
-        style={{ background: 'transparent', pointerEvents: 'none' }} // сам канвас не должен блокировать мышь
+        camera={{ position: [0, 1, 5], fov: 45 }}
+        style={{ background: 'transparent' }}
       >
-        <ambientLight intensity={0.7} />
-        <directionalLight position={[3, 5, 4]} intensity={1.2} />
-        <pointLight position={[-2, -2, 2]} intensity={0.3} color="#ff69b4" />
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[3, 5, 4]} intensity={1.5} />
+        <pointLight position={[-3, -2, 3]} intensity={0.4} color="#ff69b4" />
 
-        <Donut tilt={tilt} />
+        <DonutModel tilt={tilt} />
         <Confetti />
       </Canvas>
     </div>

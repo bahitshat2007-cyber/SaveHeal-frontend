@@ -286,3 +286,34 @@ html { scroll-behavior: smooth; }
 
 body { transition: background-color 0.3s ease, color 0.3s ease; }
 
+/* 3D Donut Box */
+.donut-box {
+  width: 100%;
+  height: 280px;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  /* Light theme: slight border and strong inner shadow to show depth on white bg */
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05), 0 4px 15px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.02), transparent);
+}
+.donut-film {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 20px;
+  pointer-events: none;
+  z-index: 10;
+  /* Light theme: Subtle glass glare */
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.6) 0%, transparent 30%, transparent 70%, rgba(255, 255, 255, 0.3) 100%);
+}
+
+[data-theme="dark"] .donut-box {
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.05), 0 4px 20px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+}
+[data-theme="dark"] .donut-film {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.15) 0%, transparent 40%, transparent 60%, rgba(255, 255, 255, 0.08) 100%);
+}
+
